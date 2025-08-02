@@ -1,1 +1,27 @@
 /node_modules
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Serverless Framework files
+.serverless/
+.aws-sam/
+.cache/
+
+# Local AWS config
+.env
+*.local
+
+# VSCode workspace files
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Ignore AWS credentials (just in case)
+*.pem
+credentials

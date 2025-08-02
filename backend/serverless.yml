@@ -16,8 +16,10 @@ provider:
         - Effect: Allow
           Action:
             - dynamodb:PutItem
+            - dynamodb:Query
           Resource:
             - arn:aws:dynamodb:us-east-1:*:table/Budgets
+            - arn:aws:dynamodb:us-east-1:*:table/Expenses
   httpApi:
     cors: true
 
@@ -28,6 +30,25 @@ functions:
       - httpApi:
           path: /budgets
           method: post
+  getBudgets:
+    handler: functions/getBudgets.handler
+    events:
+      - httpApi:
+          path: /budgets
+          method: get
+  addExpense:
+    handler: functions/addExpense.handler
+    events:
+    - httpApi:
+        path: /expenses/{budgetId}/expenses
+        method: post
+  getExpenses:
+    handler: functions/getExpenses.handler
+    events:
+      - httpApi:
+          path: /budgets/{budgetId}/expenses
+          method: get
+
 
 resources:
   Resources:
@@ -44,5 +65,20 @@ resources:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: budgetId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+    ExpensesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Expenses
+        AttributeDefinitions:
+          - AttributeName: budgetId
+            AttributeType: S
+          - AttributeName: expenseId
+            AttributeType: S
+        KeySchema: 
+          - AttributeName: budgetId
+            KeyType: HASH
+          - AttributeName: expenseId
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST

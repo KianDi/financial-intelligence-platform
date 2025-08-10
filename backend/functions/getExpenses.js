@@ -4,7 +4,30 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 exports.handler = async (event) => {
   try {
     const budgetId = event.pathParameters.budgetId;
-    const userId = "demo-user"; // For future auth-based filtering
+    const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+    if (!userId) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+      };
+    }
+
+    // First verify the budget belongs to the authenticated user
+    const budgetParams = {
+      TableName: "Budgets",
+      Key: {
+        userId: userId,
+        budgetId: budgetId
+      }
+    };
+
+    const budgetResult = await docClient.get(budgetParams).promise();
+    if (!budgetResult.Item) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: "Access denied: Budget not found or not owned by user" })
+      };
+    }
 
     const params = {
       TableName: "Expenses",

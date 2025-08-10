@@ -17,11 +17,20 @@ provider:
           Action:
             - dynamodb:PutItem
             - dynamodb:Query
+            - dynamodb:GetItem
           Resource:
             - arn:aws:dynamodb:us-east-1:*:table/Budgets
             - arn:aws:dynamodb:us-east-1:*:table/Expenses
   httpApi:
     cors: true
+    authorizers:
+      serviceAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: 
+          Fn::Sub: 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
+        audience:
+          - Ref: CognitoUserPoolClient
 
 functions:
   createBudget:
@@ -30,28 +39,63 @@ functions:
       - httpApi:
           path: /budgets
           method: post
+          authorizer:
+            name: serviceAuthorizer
   getBudgets:
     handler: functions/getBudgets.handler
     events:
       - httpApi:
           path: /budgets
           method: get
+          authorizer:
+            name: serviceAuthorizer
   addExpense:
     handler: functions/addExpense.handler
     events:
     - httpApi:
         path: /expenses/{budgetId}/expenses
         method: post
+        authorizer:
+          name: serviceAuthorizer
   getExpenses:
     handler: functions/getExpenses.handler
     events:
       - httpApi:
           path: /budgets/{budgetId}/expenses
           method: get
+          authorizer:
+            name: serviceAuthorizer
 
 
 resources:
   Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-user-pool
+        AutoVerifiedAttributes:
+          - email
+        UsernameAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireUppercase: true
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-user-pool-client
+        UserPoolId:
+          Ref: CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+          - USER_PASSWORD_AUTH
+        GenerateSecret: false
+
     BudgetsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -82,3 +126,16 @@ resources:
           - AttributeName: expenseId
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+
+  Outputs:
+    UserPoolId:
+      Value:
+        Ref: CognitoUserPool
+      Export:
+        Name: ${self:service}-UserPoolId
+
+    UserPoolClientId:
+      Value:
+        Ref: CognitoUserPoolClient
+      Export:
+        Name: ${self:service}-UserPoolClientId

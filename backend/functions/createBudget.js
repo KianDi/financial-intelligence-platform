@@ -4,7 +4,13 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
-    const userId = event.requestContext?.authorizer?.claims?.sub || "demo-user";
+    const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+    if (!userId) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+      };
+    }
 
     const budgetItem = {
       userId: userId,

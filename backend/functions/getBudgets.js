@@ -3,7 +3,13 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
   try {
-    const userId = "demo-user"; // Replace with Cognito user ID later
+    const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
+    if (!userId) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+      };
+    }
 
     const params = {
       TableName: process.env.TABLE_NAME,

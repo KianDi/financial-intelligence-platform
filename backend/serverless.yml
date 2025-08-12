@@ -71,6 +71,71 @@ functions:
           authorizer:
             name: serviceAuthorizer
 
+  # Transaction Management Functions
+  createTransaction:
+    handler: functions/createTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions
+          method: post
+          authorizer:
+            name: serviceAuthorizer
+
+  getTransactions:
+    handler: functions/getTransactions.handler
+    events:
+      - httpApi:
+          path: /transactions
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+
+  updateTransaction:
+    handler: functions/updateTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions/{timestamp}
+          method: put
+          authorizer:
+            name: serviceAuthorizer
+
+  deleteTransaction:
+    handler: functions/deleteTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions/{timestamp}
+          method: delete
+          authorizer:
+            name: serviceAuthorizer
+
+  # User Management Functions
+  createUser:
+    handler: functions/createUser.handler
+    events:
+      - httpApi:
+          path: /users
+          method: post
+          authorizer:
+            name: serviceAuthorizer
+
+  getUserProfile:
+    handler: functions/getUserProfile.handler
+    events:
+      - httpApi:
+          path: /users/profile
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+
+  updateUser:
+    handler: functions/updateUser.handler
+    events:
+      - httpApi:
+          path: /users/profile
+          method: put
+          authorizer:
+            name: serviceAuthorizer
+
 
 resources:
   Resources:

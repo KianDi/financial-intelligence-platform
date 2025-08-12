@@ -3,7 +3,6 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
   try {
-    const body = JSON.parse(event.body);
     const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
     if (!userId) {
       return {
@@ -12,24 +11,19 @@ exports.handler = async (event) => {
       };
     }
 
-    const budgetItem = {
-      userId: userId,
-      budgetId: body.budgetId, // UUID generated on frontend
-      name: body.name,
-      amount: body.amount,
-      createdAt: new Date().toISOString()
-    };
-
     const params = {
-      TableName: "Budgets",
-      Item: budgetItem
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "userId = :uid",
+      ExpressionAttributeValues: {
+        ":uid": userId,
+      },
     };
 
-    await docClient.put(params).promise();
+    const result = await docClient.query(params).promise();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Budget created", budget: budgetItem }),
+      body: JSON.stringify(result.Items),
     };
   } catch (err) {
     return {
@@ -38,6 +32,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
-// this is properly working
-// deployment 3 

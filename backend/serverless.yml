@@ -16,10 +16,26 @@ provider:
         - Effect: Allow
           Action:
             - dynamodb:PutItem
+            - dynamodb:Query
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
           Resource:
             - arn:aws:dynamodb:us-east-1:*:table/Budgets
+            - arn:aws:dynamodb:us-east-1:*:table/Expenses
+            - arn:aws:dynamodb:us-east-1:*:table/Transactions
+            - arn:aws:dynamodb:us-east-1:*:table/Users
+            - arn:aws:dynamodb:us-east-1:*:table/Transactions/index/*
   httpApi:
     cors: true
+    authorizers:
+      serviceAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: 
+          Fn::Sub: 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
+        audience:
+          - Ref: CognitoUserPoolClient
 
 functions:
   createBudget:
@@ -28,9 +44,128 @@ functions:
       - httpApi:
           path: /budgets
           method: post
+          authorizer:
+            name: serviceAuthorizer
+  getBudgets:
+    handler: functions/getBudgets.handler
+    events:
+      - httpApi:
+          path: /budgets
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+  addExpense:
+    handler: functions/addExpense.handler
+    events:
+    - httpApi:
+        path: /expenses/{budgetId}/expenses
+        method: post
+        authorizer:
+          name: serviceAuthorizer
+  getExpenses:
+    handler: functions/getExpenses.handler
+    events:
+      - httpApi:
+          path: /budgets/{budgetId}/expenses
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+
+  # Transaction Management Functions
+  createTransaction:
+    handler: functions/createTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions
+          method: post
+          authorizer:
+            name: serviceAuthorizer
+
+  getTransactions:
+    handler: functions/getTransactions.handler
+    events:
+      - httpApi:
+          path: /transactions
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+
+  updateTransaction:
+    handler: functions/updateTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions/{timestamp}
+          method: put
+          authorizer:
+            name: serviceAuthorizer
+
+  deleteTransaction:
+    handler: functions/deleteTransaction.handler
+    events:
+      - httpApi:
+          path: /transactions/{timestamp}
+          method: delete
+          authorizer:
+            name: serviceAuthorizer
+
+  # User Management Functions
+  createUser:
+    handler: functions/createUser.handler
+    events:
+      - httpApi:
+          path: /users
+          method: post
+          authorizer:
+            name: serviceAuthorizer
+
+  getUserProfile:
+    handler: functions/getUserProfile.handler
+    events:
+      - httpApi:
+          path: /users/profile
+          method: get
+          authorizer:
+            name: serviceAuthorizer
+
+  updateUser:
+    handler: functions/updateUser.handler
+    events:
+      - httpApi:
+          path: /users/profile
+          method: put
+          authorizer:
+            name: serviceAuthorizer
+
 
 resources:
   Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-user-pool
+        AutoVerifiedAttributes:
+          - email
+        UsernameAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireUppercase: true
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-user-pool-client
+        UserPoolId:
+          Ref: CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+          - USER_PASSWORD_AUTH
+        GenerateSecret: false
+
     BudgetsTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -46,3 +181,70 @@ resources:
           - AttributeName: budgetId
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+    ExpensesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Expenses
+        AttributeDefinitions:
+          - AttributeName: budgetId
+            AttributeType: S
+          - AttributeName: expenseId
+            AttributeType: S
+        KeySchema: 
+          - AttributeName: budgetId
+            KeyType: HASH
+          - AttributeName: expenseId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Transactions
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+          - AttributeName: category
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: category-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: category
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Users
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+  Outputs:
+    UserPoolId:
+      Value:
+        Ref: CognitoUserPool
+      Export:
+        Name: ${self:service}-UserPoolId
+
+    UserPoolClientId:
+      Value:
+        Ref: CognitoUserPoolClient
+      Export:
+        Name: ${self:service}-UserPoolClientId

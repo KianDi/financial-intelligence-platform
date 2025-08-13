@@ -144,6 +144,10 @@ functions:
 
 resources:
   Resources:
+    FinancialEventBus:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: financial-platform-events
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:

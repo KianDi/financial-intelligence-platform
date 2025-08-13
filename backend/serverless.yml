@@ -26,6 +26,11 @@ provider:
             - arn:aws:dynamodb:us-east-1:*:table/Transactions
             - arn:aws:dynamodb:us-east-1:*:table/Users
             - arn:aws:dynamodb:us-east-1:*:table/Transactions/index/*
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - arn:aws:events:${self:provider.region}:*:event-bus/financial-platform-events
   httpApi:
     cors: true
     authorizers:

@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
@@ -6,37 +6,39 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body);
     const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
     const { timestamp } = event.pathParameters;
-    
+
     if (!userId) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+        body: JSON.stringify({ error: 'Unauthorized: No valid user ID found' }),
       };
     }
 
     if (!timestamp) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Missing transaction timestamp in path" }),
+        body: JSON.stringify({
+          error: 'Missing transaction timestamp in path',
+        }),
       };
     }
 
     // First, verify the transaction exists and belongs to the user
     const getParams = {
-      TableName: "Transactions",
+      TableName: 'Transactions',
       Key: {
         userId: userId,
-        timestamp: timestamp
-      }
+        timestamp: timestamp,
+      },
     };
 
     const existingTransaction = await docClient.get(getParams).promise();
-    
+
     if (!existingTransaction.Item) {
       return {
         statusCode: 404,
-        body: JSON.stringify({ 
-          error: "Transaction not found or not owned by user" 
+        body: JSON.stringify({
+          error: 'Transaction not found or not owned by user',
         }),
       };
     }
@@ -46,21 +48,26 @@ exports.handler = async (event) => {
     const updates = {};
     const expressionAttributeNames = {};
     const expressionAttributeValues = {};
-    let updateExpression = "SET updatedAt = :updatedAt";
+    let updateExpression = 'SET updatedAt = :updatedAt';
 
     // Add updatedAt timestamp
-    expressionAttributeValues[":updatedAt"] = new Date().toISOString();
+    expressionAttributeValues[':updatedAt'] = new Date().toISOString();
 
     // Process each field in the request body
-    Object.keys(body).forEach(key => {
+    Object.keys(body).forEach((key) => {
       if (allowedFields.includes(key) && body[key] !== undefined) {
-        const value = key === 'amount' ? parseFloat(body[key]) : 
-                     key === 'category' ? body[key].toLowerCase() :
-                     body[key];
+        const value =
+          key === 'amount'
+            ? parseFloat(body[key])
+            : key === 'category'
+              ? body[key].toLowerCase()
+              : body[key];
 
         // Validate transaction type if being updated
         if (key === 'type' && !['income', 'expense'].includes(value)) {
-          throw new Error("Invalid transaction type. Must be 'income' or 'expense'");
+          throw new Error(
+            "Invalid transaction type. Must be 'income' or 'expense'"
+          );
         }
 
         updates[key] = value;
@@ -74,23 +81,24 @@ exports.handler = async (event) => {
     if (Object.keys(updates).length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ 
-          error: "No valid fields to update. Allowed fields: amount, category, description, type" 
+        body: JSON.stringify({
+          error:
+            'No valid fields to update. Allowed fields: amount, category, description, type',
         }),
       };
     }
 
     // Perform the update
     const updateParams = {
-      TableName: "Transactions",
+      TableName: 'Transactions',
       Key: {
         userId: userId,
-        timestamp: timestamp
+        timestamp: timestamp,
       },
       UpdateExpression: updateExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: expressionAttributeValues,
-      ReturnValues: "ALL_NEW"
+      ReturnValues: 'ALL_NEW',
     };
 
     const result = await docClient.update(updateParams).promise();
@@ -98,13 +106,13 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "Transaction updated successfully",
+        message: 'Transaction updated successfully',
         transaction: result.Attributes,
-        updatedFields: Object.keys(updates)
+        updatedFields: Object.keys(updates),
       }),
     };
   } catch (err) {
-    console.error("Error updating transaction:", err);
+    console.error('Error updating transaction:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),

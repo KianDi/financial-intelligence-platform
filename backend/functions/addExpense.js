@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
@@ -9,24 +9,26 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+        body: JSON.stringify({ error: 'Unauthorized: No valid user ID found' }),
       };
     }
 
     // First verify the budget belongs to the authenticated user
     const budgetParams = {
-      TableName: "Budgets",
+      TableName: 'Budgets',
       Key: {
         userId: userId,
-        budgetId: budgetId
-      }
+        budgetId: budgetId,
+      },
     };
 
     const budgetResult = await docClient.get(budgetParams).promise();
     if (!budgetResult.Item) {
       return {
         statusCode: 403,
-        body: JSON.stringify({ error: "Access denied: Budget not found or not owned by user" })
+        body: JSON.stringify({
+          error: 'Access denied: Budget not found or not owned by user',
+        }),
       };
     }
 
@@ -36,24 +38,24 @@ exports.handler = async (event) => {
       amount: body.amount,
       description: body.description,
       createdAt: new Date().toISOString(),
-      userId: userId
+      userId: userId,
     };
 
     const params = {
-      TableName: "Expenses",
-      Item: expenseItem
+      TableName: 'Expenses',
+      Item: expenseItem,
     };
 
     await docClient.put(params).promise();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Expense added", expense: expenseItem })
+      body: JSON.stringify({ message: 'Expense added', expense: expenseItem }),
     };
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: err.message }),
     };
   }
 };

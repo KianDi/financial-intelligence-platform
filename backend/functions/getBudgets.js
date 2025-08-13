@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
@@ -7,15 +7,15 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+        body: JSON.stringify({ error: 'Unauthorized: No valid user ID found' }),
       };
     }
 
     const params = {
       TableName: process.env.TABLE_NAME,
-      KeyConditionExpression: "userId = :uid",
+      KeyConditionExpression: 'userId = :uid',
       ExpressionAttributeValues: {
-        ":uid": userId,
+        ':uid': userId,
       },
     };
 

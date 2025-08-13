@@ -60,6 +60,34 @@ exports.handler = async (event) => {
 
     await docClient.put(params).promise();
 
+    // Emit transaction.created event to EventBridge
+    try {
+      const eventParams = {
+        Entries: [
+          {
+            Source: 'financial.platform',
+            DetailType: 'Transaction Created',
+            Detail: JSON.stringify({
+              userId: transactionItem.userId,
+              transactionId: transactionItem.transactionId,
+              amount: transactionItem.amount,
+              category: transactionItem.category,
+              description: transactionItem.description,
+              type: transactionItem.type,
+              timestamp: transactionItem.timestamp,
+            }),
+            EventBusName: 'financial-platform-events',
+          },
+        ],
+      };
+
+      await eventBridge.send(new PutEventsCommand(eventParams));
+      console.log('Transaction created event emitted successfully');
+    } catch (eventError) {
+      console.error('Failed to emit transaction created event:', eventError);
+      // Don't fail the entire request if event emission fails
+    }
+
     return {
       statusCode: 201,
       body: JSON.stringify({

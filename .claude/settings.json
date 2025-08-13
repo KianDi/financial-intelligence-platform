@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/opt/homebrew/lib/node_modules/rins_hooks/hooks/auto-commit/index.js\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/opt/homebrew/lib/node_modules/rins_hooks/hooks/notification/index.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -105,6 +105,37 @@ exports.handler = async (event) => {
 
     const result = await docClient.update(updateParams).promise();
 
+    // Emit transaction.updated event to EventBridge
+    try {
+      const eventParams = {
+        Entries: [
+          {
+            Source: 'financial.platform',
+            DetailType: 'Transaction Updated',
+            Detail: JSON.stringify({
+              userId: result.Attributes.userId,
+              transactionId: result.Attributes.transactionId,
+              updatedFields: Object.keys(updates),
+              previousValues: Object.keys(updates).reduce((prev, key) => {
+                prev[key] = existingTransaction.Item[key];
+                return prev;
+              }, {}),
+              newValues: updates,
+              timestamp: result.Attributes.timestamp,
+              updatedAt: result.Attributes.updatedAt,
+            }),
+            EventBusName: 'financial-platform-events',
+          },
+        ],
+      };
+
+      await eventBridge.send(new PutEventsCommand(eventParams));
+      console.log('Transaction updated event emitted successfully');
+    } catch (eventError) {
+      console.error('Failed to emit transaction updated event:', eventError);
+      // Don't fail the entire request if event emission fails
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({

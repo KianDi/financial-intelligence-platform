@@ -60,30 +60,34 @@ exports.handler = async (event) => {
 
     await docClient.delete(deleteParams).promise();
 
-    // Emit transaction.deleted event to EventBridge
+    // Emit transaction.deleted event to EventBridge using standardized schema
     try {
+      const eventData = createTransactionDeletedEvent({
+        userId: transactionDetails.userId,
+        transactionId: transactionDetails.transactionId,
+        deletedTransaction: transactionDetails,
+        deletedBy: transactionDetails.userId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate event against schema before sending
+      const validation = validateEventSchema(eventData, eventData);
+      if (!validation.isValid) {
+        console.error('Event schema validation failed:', validation.errors);
+        throw new Error(`Invalid event schema: ${validation.errors.join(', ')}`);
+      }
+
       const eventParams = {
         Entries: [
           {
-            Source: 'financial.platform',
-            DetailType: 'Transaction Deleted',
-            Detail: JSON.stringify({
-              userId: transactionDetails.userId,
-              transactionId: transactionDetails.transactionId,
-              amount: transactionDetails.amount,
-              category: transactionDetails.category,
-              description: transactionDetails.description,
-              type: transactionDetails.type,
-              timestamp: transactionDetails.timestamp,
-              deletedAt: new Date().toISOString(),
-            }),
-            EventBusName: 'financial-platform-events',
-          },
+            ...eventData,
+            Detail: JSON.stringify(eventData.Detail)
+          }
         ],
       };
 
       await eventBridge.send(new PutEventsCommand(eventParams));
-      console.log('Transaction deleted event emitted successfully');
+      console.log('Transaction deleted event emitted successfully with validated schema');
     } catch (eventError) {
       console.error('Failed to emit transaction deleted event:', eventError);
       // Don't fail the entire request if event emission fails

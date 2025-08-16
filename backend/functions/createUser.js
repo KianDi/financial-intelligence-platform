@@ -34,21 +34,32 @@ exports.handler = async (event) => {
 
     // Extract profile data from request body with defaults
     const {
+      name,
       firstName,
       lastName,
       preferences = {},
+      notificationPreferences = {},
       familyGroupId = null,
       timezone = 'UTC',
     } = body;
+
+    // Handle legacy 'name' field or split firstName/lastName
+    let finalFirstName = firstName;
+    let finalLastName = lastName;
+    if (name && !firstName && !lastName) {
+      const nameParts = name.split(' ');
+      finalFirstName = nameParts[0] || '';
+      finalLastName = nameParts.slice(1).join(' ') || '';
+    }
 
     // Build user profile object
     const userProfile = {
       userId: userId,
       email: userEmail || 'unknown@example.com',
-      firstName: firstName || '',
-      lastName: lastName || '',
+      firstName: finalFirstName || '',
+      lastName: finalLastName || '',
       fullName:
-        `${firstName || ''} ${lastName || ''}`.trim() || 'Anonymous User',
+        `${finalFirstName || ''} ${finalLastName || ''}`.trim() || 'Anonymous User',
       preferences: {
         currency: preferences.currency || 'USD',
         dateFormat: preferences.dateFormat || 'YYYY-MM-DD',
@@ -62,9 +73,17 @@ exports.handler = async (event) => {
             : false,
         ...preferences,
       },
+      notificationPreferences: {
+        budgetAlerts: notificationPreferences.budgetAlerts !== undefined 
+          ? notificationPreferences.budgetAlerts 
+          : true,
+        email: notificationPreferences.email || userEmail || 'unknown@example.com',
+        preferredChannel: notificationPreferences.preferredChannel || 'console',
+        ...notificationPreferences,
+      },
       familyGroupId: familyGroupId,
       timezone: timezone,
-      profileCompleted: !!(firstName && lastName), // Boolean flag for onboarding
+      profileCompleted: !!(finalFirstName && finalLastName), // Boolean flag for onboarding
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
@@ -86,7 +105,7 @@ exports.handler = async (event) => {
       statusCode: 201,
       body: JSON.stringify({
         message: 'User profile created successfully',
-        profile: responseProfile,
+        user: responseProfile,
       }),
     };
   } catch (err) {

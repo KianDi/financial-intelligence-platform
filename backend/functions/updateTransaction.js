@@ -106,32 +106,36 @@ exports.handler = async (event) => {
 
     const result = await docClient.update(updateParams).promise();
 
-    // Emit transaction.updated event to EventBridge
+    // Emit transaction.updated event to EventBridge using standardized schema
     try {
+      const eventData = createTransactionUpdatedEvent({
+        userId: result.Attributes.userId,
+        transactionId: result.Attributes.transactionId,
+        beforeState: existingTransaction.Item,
+        afterState: result.Attributes,
+        changes: Object.keys(updates),
+        updatedBy: result.Attributes.userId,
+        timestamp: result.Attributes.updatedAt
+      });
+
+      // Validate event against schema before sending
+      const validation = validateEventSchema(eventData, eventData);
+      if (!validation.isValid) {
+        console.error('Event schema validation failed:', validation.errors);
+        throw new Error(`Invalid event schema: ${validation.errors.join(', ')}`);
+      }
+
       const eventParams = {
         Entries: [
           {
-            Source: 'financial.platform',
-            DetailType: 'Transaction Updated',
-            Detail: JSON.stringify({
-              userId: result.Attributes.userId,
-              transactionId: result.Attributes.transactionId,
-              updatedFields: Object.keys(updates),
-              previousValues: Object.keys(updates).reduce((prev, key) => {
-                prev[key] = existingTransaction.Item[key];
-                return prev;
-              }, {}),
-              newValues: updates,
-              timestamp: result.Attributes.timestamp,
-              updatedAt: result.Attributes.updatedAt,
-            }),
-            EventBusName: 'financial-platform-events',
-          },
+            ...eventData,
+            Detail: JSON.stringify(eventData.Detail)
+          }
         ],
       };
 
       await eventBridge.send(new PutEventsCommand(eventParams));
-      console.log('Transaction updated event emitted successfully');
+      console.log('Transaction updated event emitted successfully with validated schema');
     } catch (eventError) {
       console.error('Failed to emit transaction updated event:', eventError);
       // Don't fail the entire request if event emission fails

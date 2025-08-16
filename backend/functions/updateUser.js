@@ -33,9 +33,11 @@ exports.handler = async (event) => {
 
     // Define allowed update fields
     const allowedFields = [
+      'name',
       'firstName',
       'lastName',
       'preferences',
+      'notificationPreferences',
       'familyGroupId',
       'timezone',
     ];
@@ -53,19 +55,40 @@ exports.handler = async (event) => {
       if (allowedFields.includes(key) && body[key] !== undefined) {
         updates[key] = body[key];
 
-        if (key === 'preferences') {
+        if (key === 'name') {
+          // Handle legacy 'name' field - split into firstName/lastName
+          const nameParts = body[key].split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          expressionAttributeNames['#firstName'] = 'firstName';
+          expressionAttributeNames['#lastName'] = 'lastName';
+          expressionAttributeValues[':firstName'] = firstName;
+          expressionAttributeValues[':lastName'] = lastName;
+          updateExpression += `, #firstName = :firstName, #lastName = :lastName`;
+          updates.firstName = firstName;
+          updates.lastName = lastName;
+        } else if (key === 'preferences') {
           // Merge preferences with existing ones
           const currentPreferences = existingUser.Item.preferences || {};
           const newPreferences = { ...currentPreferences, ...body[key] };
           expressionAttributeNames[`#${key}`] = key;
           expressionAttributeValues[`:${key}`] = newPreferences;
           updates[key] = newPreferences;
+          updateExpression += `, #${key} = :${key}`;
+        } else if (key === 'notificationPreferences') {
+          // Merge notification preferences with existing ones
+          const currentNotificationPreferences = existingUser.Item.notificationPreferences || {};
+          const newNotificationPreferences = { ...currentNotificationPreferences, ...body[key] };
+          expressionAttributeNames[`#${key}`] = key;
+          expressionAttributeValues[`:${key}`] = newNotificationPreferences;
+          updates[key] = newNotificationPreferences;
+          updateExpression += `, #${key} = :${key}`;
         } else {
           expressionAttributeNames[`#${key}`] = key;
           expressionAttributeValues[`:${key}`] = body[key];
+          updateExpression += `, #${key} = :${key}`;
         }
-
-        updateExpression += `, #${key} = :${key}`;
       }
     });
 
@@ -138,7 +161,7 @@ exports.handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         message: 'User profile updated successfully',
-        profile: updatedProfile,
+        user: updatedProfile,
         updatedFields: Object.keys(updates),
       }),
     };

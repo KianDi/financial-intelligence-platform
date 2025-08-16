@@ -1,15 +1,17 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
+const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
 const docClient = new AWS.DynamoDB.DocumentClient();
+const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
     const userId = event.requestContext?.authorizer?.jwt?.claims?.sub;
-    
+
     if (!userId) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+        body: JSON.stringify({ error: 'Unauthorized: No valid user ID found' }),
       };
     }
 
@@ -18,8 +20,8 @@ exports.handler = async (event) => {
     if (!amount || !category || !type) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ 
-          error: "Missing required fields: amount, category, type are required" 
+        body: JSON.stringify({
+          error: 'Missing required fields: amount, category, type are required',
         }),
       };
     }
@@ -28,8 +30,8 @@ exports.handler = async (event) => {
     if (!['income', 'expense'].includes(type)) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ 
-          error: "Invalid transaction type. Must be 'income' or 'expense'" 
+        body: JSON.stringify({
+          error: "Invalid transaction type. Must be 'income' or 'expense'",
         }),
       };
     }
@@ -47,26 +49,54 @@ exports.handler = async (event) => {
       description: description || '',
       type: type, // 'income' or 'expense'
       createdAt: timestamp,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     };
 
     // Store transaction in Transactions table
     const params = {
-      TableName: "Transactions",
-      Item: transactionItem
+      TableName: 'Transactions',
+      Item: transactionItem,
     };
 
     await docClient.put(params).promise();
 
+    // Emit transaction.created event to EventBridge
+    try {
+      const eventParams = {
+        Entries: [
+          {
+            Source: 'financial.platform',
+            DetailType: 'Transaction Created',
+            Detail: JSON.stringify({
+              userId: transactionItem.userId,
+              transactionId: transactionItem.transactionId,
+              amount: transactionItem.amount,
+              category: transactionItem.category,
+              description: transactionItem.description,
+              type: transactionItem.type,
+              timestamp: transactionItem.timestamp,
+            }),
+            EventBusName: 'financial-platform-events',
+          },
+        ],
+      };
+
+      await eventBridge.send(new PutEventsCommand(eventParams));
+      console.log('Transaction created event emitted successfully');
+    } catch (eventError) {
+      console.error('Failed to emit transaction created event:', eventError);
+      // Don't fail the entire request if event emission fails
+    }
+
     return {
       statusCode: 201,
-      body: JSON.stringify({ 
-        message: "Transaction created successfully", 
-        transaction: transactionItem 
+      body: JSON.stringify({
+        message: 'Transaction created successfully',
+        transaction: transactionItem,
       }),
     };
   } catch (err) {
-    console.error("Error creating transaction:", err);
+    console.error('Error creating transaction:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),

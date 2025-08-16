@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:format": "npm run lint:fix && npm run format",
+    "pre-deploy": "npm run lint:format"
   },
   "keywords": [],
   "author": "",
@@ -11,7 +17,16 @@
   "description": "",
   "dependencies": {
     "aws-sdk": "^2.1692.0",
+    "@aws-sdk/client-eventbridge": "^3.658.1",
     "axios": "^1.11.0",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2"
   }
 }

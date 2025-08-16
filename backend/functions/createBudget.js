@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const AWS = require('aws-sdk');
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 exports.handler = async (event) => {
@@ -8,7 +8,7 @@ exports.handler = async (event) => {
     if (!userId) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized: No valid user ID found" }),
+        body: JSON.stringify({ error: 'Unauthorized: No valid user ID found' }),
       };
     }
 
@@ -17,19 +17,19 @@ exports.handler = async (event) => {
       budgetId: body.budgetId, // UUID generated on frontend
       name: body.name,
       amount: body.amount,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     const params = {
-      TableName: "Budgets",
-      Item: budgetItem
+      TableName: 'Budgets',
+      Item: budgetItem,
     };
 
     await docClient.put(params).promise();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Budget created", budget: budgetItem }),
+      body: JSON.stringify({ message: 'Budget created', budget: budgetItem }),
     };
   } catch (err) {
     return {
@@ -40,4 +40,4 @@ exports.handler = async (event) => {
 };
 
 // this is properly working
-// deployment 3 
+// deployment 3

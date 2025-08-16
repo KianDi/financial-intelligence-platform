@@ -171,11 +171,12 @@ async function emitBudgetThresholdEvent(userId, budgetId, category, currentSpend
   }
 }
 
-async function updateBudgetMetrics(budgetId, currentSpending, percentageUsed) {
+async function updateBudgetMetrics(userId, budgetId, currentSpending, percentageUsed) {
   try {
     const updateParams = {
       TableName: 'Budgets',
       Key: {
+        userId: userId,
         budgetId: budgetId,
       },
       UpdateExpression: 'SET currentSpending = :spending, percentageUsed = :percentage, lastCalculated = :timestamp',

@@ -70,7 +70,7 @@ async function processTransactionEvent(eventDetail, eventType) {
       }
 
       // Update budget utilization metrics
-      await updateBudgetMetrics(budget.budgetId, currentSpending, percentageUsed);
+      await updateBudgetMetrics(userId, budget.budgetId, currentSpending, percentageUsed);
     }
   } catch (error) {
     console.error('Error processing transaction event:', error);

@@ -179,13 +179,8 @@ functions:
 
 resources:
   Resources:
-    # EventBridge Custom Bus for Financial Platform Events
-    FinancialEventBus:
-      Type: AWS::Events::EventBus
-      Properties:
-        Name: financial-platform-events
-        Description: Custom event bus for financial platform events and audit logging
-
+    # EventBridge Custom Bus already exists - managed externally
+    
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:

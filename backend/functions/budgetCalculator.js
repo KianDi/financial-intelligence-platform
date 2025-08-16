@@ -54,7 +54,32 @@ exports.handler = async (event, context) => {
 };
 
 async function processTransactionEvent(eventDetail, eventType) {
-  const { userId, category, amount, type } = eventDetail;
+  let userId, category, amount, type;
+
+  // Extract data based on event type
+  if (eventType === 'Transaction Created') {
+    ({ userId, category, amount, type } = eventDetail);
+  } else if (eventType === 'Transaction Updated') {
+    userId = eventDetail.userId;
+    // Use the new state for calculations
+    category = eventDetail.afterState.category;
+    amount = eventDetail.afterState.amount;
+    type = eventDetail.afterState.type;
+  } else if (eventType === 'Transaction Deleted') {
+    userId = eventDetail.userId;
+    // Use the deleted transaction data for reverse calculations
+    category = eventDetail.deletedTransaction.category;
+    amount = eventDetail.deletedTransaction.amount;
+    type = eventDetail.deletedTransaction.type;
+  } else {
+    console.error(`Unknown event type: ${eventType}`);
+    return;
+  }
+
+  // Validate required fields
+  if (!userId || !category) {
+    throw new Error(`Missing required fields: userId or category in event ${eventType}`);
+  }
 
   // Skip income transactions for budget calculations
   if (type === 'income') {

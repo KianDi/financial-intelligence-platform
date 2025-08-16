@@ -114,7 +114,7 @@ async function testApiCall(token) {
 
 // Main execution
 async function main() {
-  const email = 'test3@example.com';
+  const email = 'test4@example.com';
   const password = 'TestPass123!';
 
   console.log('=== Creating Test User ===');

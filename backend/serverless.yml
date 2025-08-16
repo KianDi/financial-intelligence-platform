@@ -141,6 +141,20 @@ functions:
           authorizer:
             name: serviceAuthorizer
 
+  # Event Consumer Functions
+  budgetCalculator:
+    handler: functions/budgetCalculator.handler
+    events:
+      - eventBridge:
+          eventBus: financial-platform-events
+          pattern:
+            source:
+              - financial.platform
+            detail-type:
+              - Transaction Created
+              - Transaction Updated
+              - Transaction Deleted
+
 
 resources:
   Resources:

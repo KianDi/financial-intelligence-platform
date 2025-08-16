@@ -118,7 +118,208 @@ async function testPhase2EventEmission(accessToken) {
   }
 }
 
-// Test EventBridge Infrastructure (Simulated)
+// Test Budget Threshold Event Flow (End-to-End)
+async function testBudgetThresholdFlow(accessToken) {
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  console.log('\nTesting Budget Threshold Event Flow (End-to-End)\n');
+
+  try {
+    // Test 1: Create a test budget for threshold testing
+    console.log('1. Creating test budget for threshold testing...');
+    const budgetResponse = await axios.post(
+      `${API_BASE_URL}/budgets`,
+      testBudgetData,
+      { headers }
+    );
+
+    console.log('SUCCESS: Test budget created:', {
+      budgetId: budgetResponse.data.budget.budgetId,
+      amount: budgetResponse.data.budget.amount,
+      category: testBudgetData.category
+    });
+
+    // Test 2: Create transactions approaching budget threshold (80%)
+    console.log('\n2. Creating expense transactions to approach budget threshold...');
+    const transactions = [];
+    
+    // First transaction - 70% of budget
+    const transaction1 = {
+      amount: 140.0, // 70% of 200
+      category: testBudgetData.category,
+      description: 'Threshold test - 70% budget usage',
+      type: 'expense',
+    };
+
+    const txn1Response = await axios.post(
+      `${API_BASE_URL}/transactions`,
+      transaction1,
+      { headers }
+    );
+    transactions.push(txn1Response.data.transaction);
+
+    console.log('SUCCESS: Transaction 1 created (70% budget usage):', {
+      amount: transaction1.amount,
+      category: transaction1.category,
+      eventEmissionStatus: 'Should trigger budget calculation'
+    });
+
+    // Wait for event processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Second transaction - Push to 85% (should trigger warning)
+    const transaction2 = {
+      amount: 30.0, // Additional 15% (total 85%)
+      category: testBudgetData.category,
+      description: 'Threshold test - 85% budget usage (WARNING)',
+      type: 'expense',
+    };
+
+    const txn2Response = await axios.post(
+      `${API_BASE_URL}/transactions`,
+      transaction2,
+      { headers }
+    );
+    transactions.push(txn2Response.data.transaction);
+
+    console.log('SUCCESS: Transaction 2 created (85% budget usage):', {
+      amount: transaction2.amount,
+      totalSpent: transaction1.amount + transaction2.amount,
+      budgetLimit: testBudgetData.amount,
+      percentage: ((transaction1.amount + transaction2.amount) / testBudgetData.amount * 100).toFixed(1) + '%',
+      eventEmissionStatus: 'Should trigger budget threshold WARNING event and notification'
+    });
+
+    // Wait for event processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Third transaction - Push to 110% (should trigger exceeded)
+    const transaction3 = {
+      amount: 50.0, // Additional 25% (total 110%)
+      category: testBudgetData.category,
+      description: 'Threshold test - 110% budget usage (EXCEEDED)',
+      type: 'expense',
+    };
+
+    const txn3Response = await axios.post(
+      `${API_BASE_URL}/transactions`,
+      transaction3,
+      { headers }
+    );
+    transactions.push(txn3Response.data.transaction);
+
+    const totalSpent = transaction1.amount + transaction2.amount + transaction3.amount;
+    console.log('SUCCESS: Transaction 3 created (110% budget usage):', {
+      amount: transaction3.amount,
+      totalSpent: totalSpent,
+      budgetLimit: testBudgetData.amount,
+      percentage: (totalSpent / testBudgetData.amount * 100).toFixed(1) + '%',
+      eventEmissionStatus: 'Should trigger budget threshold EXCEEDED event and notification'
+    });
+
+    // Wait for event processing
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    console.log('\n=== BUDGET THRESHOLD EVENT FLOW SUMMARY ===');
+    console.log('Expected Event Flow:');
+    console.log('1. Transaction Created events → EventBridge');
+    console.log('2. Budget Calculator processes transactions → calculates spending');
+    console.log('3. Budget Threshold Reached events → EventBridge (85% and 110%)');
+    console.log('4. Notification Handler processes threshold events → sends user alerts');
+    console.log('5. Notification Sent events → EventBridge (audit trail)');
+    console.log('\nCheck AWS CloudWatch Logs to verify complete event flow!');
+
+    return transactions;
+
+  } catch (error) {
+    console.error('ERROR: Budget threshold flow test failed:', {
+      status: error.response?.status,
+      message: error.response?.data?.error || error.message,
+      endpoint: error.config?.url,
+    });
+    return [];
+  }
+}
+
+// Test User Profile and Notification Preferences
+async function testUserProfileIntegration(accessToken) {
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  console.log('\nTesting User Profile and Notification Integration\n');
+
+  try {
+    // Test 1: Create/Update user profile with notification preferences
+    console.log('1. Testing user profile with notification preferences...');
+    const userProfileData = {
+      name: 'Phase 2 Test User',
+      email: 'test@example.com',
+      notificationPreferences: {
+        budgetAlerts: true,
+        email: 'test@example.com',
+        preferredChannel: 'console'
+      }
+    };
+
+    try {
+      const profileResponse = await axios.post(
+        `${API_BASE_URL}/users`,
+        userProfileData,
+        { headers }
+      );
+
+      console.log('SUCCESS: User profile created/updated:', {
+        userId: profileResponse.data.user.userId,
+        notificationPreferences: profileResponse.data.user.notificationPreferences
+      });
+    } catch (error) {
+      // Profile might already exist, try update
+      try {
+        const updateResponse = await axios.put(
+          `${API_BASE_URL}/users/profile`,
+          userProfileData,
+          { headers }
+        );
+
+        console.log('SUCCESS: User profile updated:', {
+          userId: updateResponse.data.user.userId,
+          notificationPreferences: updateResponse.data.user.notificationPreferences
+        });
+      } catch (updateError) {
+        console.log('INFO: User profile operations not fully implemented or failed');
+      }
+    }
+
+    // Test 2: Get user profile
+    console.log('\n2. Testing user profile retrieval...');
+    try {
+      const getProfileResponse = await axios.get(
+        `${API_BASE_URL}/users/profile`,
+        { headers }
+      );
+
+      console.log('SUCCESS: User profile retrieved:', {
+        userId: getProfileResponse.data.user.userId,
+        notificationPreferences: getProfileResponse.data.user.notificationPreferences || 'default'
+      });
+    } catch (error) {
+      console.log('INFO: User profile retrieval not implemented or failed');
+    }
+
+  } catch (error) {
+    console.error('ERROR: User profile integration test failed:', {
+      status: error.response?.status,
+      message: error.response?.data?.error || error.message,
+    });
+  }
+}
+
+// Test EventBridge Infrastructure (Updated)
 async function testEventBridgeInfrastructure() {
   console.log('\nTesting EventBridge Infrastructure Setup\n');
 

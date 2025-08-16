@@ -59,6 +59,35 @@ exports.handler = async (event) => {
 
     await docClient.delete(deleteParams).promise();
 
+    // Emit transaction.deleted event to EventBridge
+    try {
+      const eventParams = {
+        Entries: [
+          {
+            Source: 'financial.platform',
+            DetailType: 'Transaction Deleted',
+            Detail: JSON.stringify({
+              userId: transactionDetails.userId,
+              transactionId: transactionDetails.transactionId,
+              amount: transactionDetails.amount,
+              category: transactionDetails.category,
+              description: transactionDetails.description,
+              type: transactionDetails.type,
+              timestamp: transactionDetails.timestamp,
+              deletedAt: new Date().toISOString(),
+            }),
+            EventBusName: 'financial-platform-events',
+          },
+        ],
+      };
+
+      await eventBridge.send(new PutEventsCommand(eventParams));
+      console.log('Transaction deleted event emitted successfully');
+    } catch (eventError) {
+      console.error('Failed to emit transaction deleted event:', eventError);
+      // Don't fail the entire request if event emission fails
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({

@@ -507,4 +507,6 @@ module.exports = {
   testPhase2EventEmission,
   testEventBridgeInfrastructure,
   testEventSchemas,
+  testBudgetThresholdFlow,
+  testUserProfileIntegration,
 };

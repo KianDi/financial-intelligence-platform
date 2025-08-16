@@ -134,13 +134,25 @@ async function testEventBridgeInfrastructure() {
   console.log('\n4. COMPLETED - Transaction Created Event Emission');
   console.log('   Status: createTransaction.js emits events to EventBridge');
 
-  console.log('\n5. PENDING - Event Consumer Functions');
-  console.log('   Status: Budget Calculator, Notifications, Audit Logger - Pending');
+  console.log('\n5. COMPLETED - Transaction Updated Event Emission');
+  console.log('   Status: updateTransaction.js emits events to EventBridge');
 
-  console.log('\n6. PENDING - Event Rules & Routing');
-  console.log('   Status: EventBridge rules to route events - Pending');
+  console.log('\n6. COMPLETED - Transaction Deleted Event Emission');
+  console.log('   Status: deleteTransaction.js emits events to EventBridge');
 
-  console.log('\nInfrastructure Status: Foundation Ready, Consumers In Progress');
+  console.log('\n7. COMPLETED - Budget Calculator Event Consumer');
+  console.log('   Status: Real-time budget monitoring and threshold detection operational');
+
+  console.log('\n8. COMPLETED - Notification Handler Event Consumer');
+  console.log('   Status: Budget threshold alerts and user notifications operational');
+
+  console.log('\n9. PENDING - Audit Logger Event Consumer');
+  console.log('   Status: Comprehensive financial activity logging - Pending');
+
+  console.log('\n10. PENDING - Event Rules & Complete Routing');
+  console.log('    Status: Additional EventBridge rules and routing - Pending');
+
+  console.log('\nInfrastructure Status: Major Components Operational, Final Integration Pending');
 }
 
 // Test Event Schema Validation

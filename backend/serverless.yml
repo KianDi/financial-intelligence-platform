@@ -166,9 +166,21 @@ functions:
             detail-type:
               - Budget Threshold Reached
 
+  # Audit Logger Function - Logs all financial activities for compliance
+  auditLogger:
+    handler: functions/auditLogger.handler
+    events:
+      - eventBridge:
+          eventBus: financial-platform-events
+          pattern:
+            source:
+              - financial.platform
+            # Log all events from the financial platform
 
 resources:
   Resources:
+    # EventBridge Custom Bus already exists - managed externally
+    
     CognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:

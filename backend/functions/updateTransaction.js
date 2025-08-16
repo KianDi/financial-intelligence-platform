@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
+const { createTransactionUpdatedEvent, validateEventSchema } = require('../schemas/eventSchemas');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 

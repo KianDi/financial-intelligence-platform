@@ -1,5 +1,7 @@
 const AWS = require('aws-sdk');
+const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
 const docClient = new AWS.DynamoDB.DocumentClient();
+const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 exports.handler = async (event) => {
   try {

@@ -1,34 +1,50 @@
 const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
+const { processEventWithRetry, RetryableError, NonRetryableError, getSystemHealth } = require('../utils/errorHandling');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   console.log('Audit Logger processing event:', JSON.stringify(event, null, 2));
+  console.log('System health check:', getSystemHealth());
 
   try {
-    // Process each EventBridge record
-    for (const record of event.Records || [event]) {
-      const eventDetail = record.detail || record;
-      const eventType = record['detail-type'] || record.DetailType;
-      const eventSource = record.source || record.Source;
+    // Use robust event processing with retry logic
+    const processingResult = await processEventWithRetry(
+      event,
+      async (record) => {
+        const eventDetail = record.detail || record;
+        const eventType = record['detail-type'] || record.DetailType;
+        const eventSource = record.source || record.Source;
 
-      console.log(`Processing audit log for ${eventType} from ${eventSource}`);
+        console.log(`Processing audit log for ${eventType} from ${eventSource}`);
 
-      await processAuditEvent({
-        eventType,
-        eventSource,
-        eventDetail,
-        originalRecord: record
-      });
-    }
+        // Validate required fields for audit logging
+        if (!eventType || !eventSource) {
+          throw new NonRetryableError(`Missing required fields: eventType or eventSource in audit event`);
+        }
+
+        return await processAuditEvent({
+          eventType,
+          eventSource,
+          eventDetail,
+          originalRecord: record
+        });
+      },
+      { functionName: context.functionName }
+    );
+
+    console.log('Processing summary:', processingResult);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Audit logging completed successfully' }),
+      body: JSON.stringify({ 
+        message: 'Audit logging completed successfully',
+        summary: processingResult 
+      }),
     };
   } catch (err) {
-    console.error('Error in audit logger:', err);
+    console.error('Critical error in audit logger:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),

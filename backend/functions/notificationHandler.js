@@ -1,35 +1,53 @@
 const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
+const { createNotificationSentEvent, validateEventSchema } = require('../schemas/eventSchemas');
+const { processEventWithRetry, RetryableError, NonRetryableError, getSystemHealth } = require('../utils/errorHandling');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   console.log('Notification Handler processing event:', JSON.stringify(event, null, 2));
+  console.log('System health check:', getSystemHealth());
 
   try {
-    // Process each EventBridge record
-    for (const record of event.Records || [event]) {
-      const eventDetail = record.detail || record;
-      const eventType = record['detail-type'] || record.DetailType;
+    // Use robust event processing with retry logic
+    const processingResult = await processEventWithRetry(
+      event,
+      async (record) => {
+        const eventDetail = record.detail || record;
+        const eventType = record['detail-type'] || record.DetailType;
 
-      console.log(`Processing ${eventType} event for notification`);
+        console.log(`Processing ${eventType} event for notification`);
 
-      // Process budget threshold events
-      if (eventType === 'Budget Threshold Reached') {
-        await processBudgetThresholdNotification(eventDetail);
-      }
-      // Future: Add other notification types (transaction alerts, etc.)
-      else {
-        console.log(`Skipping non-notification event: ${eventType}`);
-      }
-    }
+        // Process budget threshold events
+        if (eventType === 'Budget Threshold Reached') {
+          // Validate required fields
+          if (!eventDetail.userId || !eventDetail.budgetId) {
+            throw new NonRetryableError(`Missing required fields: userId or budgetId in event ${eventType}`);
+          }
+          
+          return await processBudgetThresholdNotification(eventDetail);
+        }
+        // Future: Add other notification types (transaction alerts, etc.)
+        else {
+          console.log(`Skipping non-notification event: ${eventType}`);
+          return { skipped: true, reason: 'non-notification event' };
+        }
+      },
+      { functionName: context.functionName }
+    );
+
+    console.log('Processing summary:', processingResult);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Notifications processed successfully' }),
+      body: JSON.stringify({ 
+        message: 'Notifications processed successfully',
+        summary: processingResult 
+      }),
     };
   } catch (err) {
-    console.error('Error in notification handler:', err);
+    console.error('Critical error in notification handler:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
@@ -235,27 +253,37 @@ async function storeNotificationHistory({ userId, budgetId, category, currentSpe
 
 async function emitNotificationSentEvent({ userId, budgetId, category, thresholdType, notificationChannel }) {
   try {
+    const notificationId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Use standardized event schema
+    const eventData = createNotificationSentEvent({
+      userId,
+      budgetId,
+      category,
+      notificationType: 'budget_threshold',
+      thresholdType,
+      channel: notificationChannel,
+      notificationId
+    });
+
+    // Validate event against schema before sending
+    const validation = validateEventSchema(eventData, eventData);
+    if (!validation.isValid) {
+      console.error('Event schema validation failed:', validation.errors);
+      throw new Error(`Invalid event schema: ${validation.errors.join(', ')}`);
+    }
+
     const eventParams = {
       Entries: [
         {
-          Source: 'financial.platform',
-          DetailType: 'Notification Sent',
-          Detail: JSON.stringify({
-            userId,
-            budgetId,
-            category,
-            notificationType: 'budget_threshold',
-            thresholdType,
-            channel: notificationChannel,
-            timestamp: new Date().toISOString(),
-          }),
-          EventBusName: 'financial-platform-events',
-        },
+          ...eventData,
+          Detail: JSON.stringify(eventData.Detail)
+        }
       ],
     };
 
     await eventBridge.send(new PutEventsCommand(eventParams));
-    console.log('Notification sent event emitted successfully');
+    console.log('Notification sent event emitted successfully with validated schema');
   } catch (error) {
     console.error('Failed to emit notification sent event:', error);
     // Don't throw - event emission is secondary

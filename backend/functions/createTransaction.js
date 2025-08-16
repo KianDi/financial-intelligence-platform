@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
+const { createTransactionCreatedEvent, validateEventSchema } = require('../schemas/eventSchemas');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -60,29 +61,36 @@ exports.handler = async (event) => {
 
     await docClient.put(params).promise();
 
-    // Emit transaction.created event to EventBridge
+    // Emit transaction.created event to EventBridge using standardized schema
     try {
+      const eventData = createTransactionCreatedEvent({
+        userId: transactionItem.userId,
+        transactionId: transactionItem.transactionId,
+        amount: transactionItem.amount,
+        category: transactionItem.category,
+        type: transactionItem.type,
+        description: transactionItem.description,
+        timestamp: transactionItem.timestamp
+      });
+
+      // Validate event against schema before sending
+      const validation = validateEventSchema(eventData, eventData);
+      if (!validation.isValid) {
+        console.error('Event schema validation failed:', validation.errors);
+        throw new Error(`Invalid event schema: ${validation.errors.join(', ')}`);
+      }
+
       const eventParams = {
         Entries: [
           {
-            Source: 'financial.platform',
-            DetailType: 'Transaction Created',
-            Detail: JSON.stringify({
-              userId: transactionItem.userId,
-              transactionId: transactionItem.transactionId,
-              amount: transactionItem.amount,
-              category: transactionItem.category,
-              description: transactionItem.description,
-              type: transactionItem.type,
-              timestamp: transactionItem.timestamp,
-            }),
-            EventBusName: 'financial-platform-events',
-          },
+            ...eventData,
+            Detail: JSON.stringify(eventData.Detail)
+          }
         ],
       };
 
       await eventBridge.send(new PutEventsCommand(eventParams));
-      console.log('Transaction created event emitted successfully');
+      console.log('Transaction created event emitted successfully with validated schema');
     } catch (eventError) {
       console.error('Failed to emit transaction created event:', eventError);
       // Don't fail the entire request if event emission fails

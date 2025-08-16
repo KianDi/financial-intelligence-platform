@@ -1,34 +1,51 @@
 const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
+const { createBudgetThresholdReachedEvent, validateEventSchema } = require('../schemas/eventSchemas');
+const { processEventWithRetry, RetryableError, NonRetryableError, getSystemHealth } = require('../utils/errorHandling');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   console.log('Budget Calculator processing event:', JSON.stringify(event, null, 2));
+  console.log('System health check:', getSystemHealth());
 
   try {
-    // Process each EventBridge record
-    for (const record of event.Records || [event]) {
-      const eventDetail = record.detail || record;
-      const eventType = record['detail-type'] || record.DetailType;
+    // Use robust event processing with retry logic
+    const processingResult = await processEventWithRetry(
+      event,
+      async (record) => {
+        const eventDetail = record.detail || record;
+        const eventType = record['detail-type'] || record.DetailType;
 
-      console.log(`Processing ${eventType} event for user ${eventDetail.userId}`);
+        console.log(`Processing ${eventType} event for user ${eventDetail.userId}`);
 
-      // Only process transaction events
-      if (!eventType?.includes('Transaction')) {
-        console.log('Skipping non-transaction event');
-        continue;
-      }
+        // Only process transaction events
+        if (!eventType?.includes('Transaction')) {
+          console.log('Skipping non-transaction event');
+          return { skipped: true, reason: 'non-transaction event' };
+        }
 
-      await processTransactionEvent(eventDetail, eventType);
-    }
+        // Validate required fields
+        if (!eventDetail.userId || !eventDetail.category) {
+          throw new NonRetryableError(`Missing required fields: userId or category in event ${eventType}`);
+        }
+
+        return await processTransactionEvent(eventDetail, eventType);
+      },
+      { functionName: context.functionName }
+    );
+
+    console.log('Processing summary:', processingResult);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Budget calculations completed successfully' }),
+      body: JSON.stringify({ 
+        message: 'Budget calculations completed', 
+        summary: processingResult 
+      }),
     };
   } catch (err) {
-    console.error('Error in budget calculator:', err);
+    console.error('Critical error in budget calculator:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
@@ -143,28 +160,35 @@ async function emitBudgetThresholdEvent(userId, budgetId, category, currentSpend
   try {
     const thresholdType = percentageUsed >= 100 ? 'exceeded' : 'warning';
     
+    // Use standardized event schema
+    const eventData = createBudgetThresholdReachedEvent({
+      userId,
+      budgetId,
+      category,
+      currentSpending,
+      limit,
+      percentageUsed: Math.round(percentageUsed * 100) / 100,
+      thresholdType
+    });
+
+    // Validate event against schema before sending
+    const validation = validateEventSchema(eventData, eventData);
+    if (!validation.isValid) {
+      console.error('Event schema validation failed:', validation.errors);
+      throw new Error(`Invalid event schema: ${validation.errors.join(', ')}`);
+    }
+
     const eventParams = {
       Entries: [
         {
-          Source: 'financial.platform',
-          DetailType: 'Budget Threshold Reached',
-          Detail: JSON.stringify({
-            userId,
-            budgetId,
-            category,
-            currentSpending,
-            limit,
-            percentageUsed: Math.round(percentageUsed * 100) / 100,
-            thresholdType,
-            timestamp: new Date().toISOString(),
-          }),
-          EventBusName: 'financial-platform-events',
-        },
+          ...eventData,
+          Detail: JSON.stringify(eventData.Detail)
+        }
       ],
     };
 
     await eventBridge.send(new PutEventsCommand(eventParams));
-    console.log(`Budget threshold ${thresholdType} event emitted for ${category} budget`);
+    console.log(`Budget threshold ${thresholdType} event emitted for ${category} budget with validated schema`);
   } catch (error) {
     console.error('Failed to emit budget threshold event:', error);
     // Don't throw - this is a secondary operation

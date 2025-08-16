@@ -4,6 +4,7 @@ const API_BASE_URL = 'https://4we9e1egsg.execute-api.us-east-1.amazonaws.com';
 
 // Test data for budget threshold testing
 const testBudgetData = {
+  budgetId: `budget-test-${Date.now()}`,
   name: 'Phase 2 Test Budget',
   amount: 200.0,
   category: 'food'

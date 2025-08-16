@@ -100,11 +100,11 @@ async function testPhase2EventEmission(accessToken) {
         eventEmissionStatus: 'Delete event should be emitted to EventBridge',
       });
     } catch (error) {
-      console.log('INFO: Delete event emission not yet implemented or failed');
+      console.log('ERROR: Delete event emission failed:', error.response?.data?.error || error.message);
     }
 
     console.log(
-      '\nPhase 2 Event Emission Testing Complete! Transaction events are being sent to EventBridge.'
+      '\nPhase 2 Event Emission Testing Complete! All transaction events are being sent to EventBridge.'
     );
     console.log(
       '\nNOTE: To fully validate events, check AWS CloudWatch Logs for EventBridge event confirmations.'

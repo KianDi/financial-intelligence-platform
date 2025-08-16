@@ -2,6 +2,13 @@ const axios = require('axios');
 
 const API_BASE_URL = 'https://4we9e1egsg.execute-api.us-east-1.amazonaws.com';
 
+// Test data for budget threshold testing
+const testBudgetData = {
+  name: 'Phase 2 Test Budget',
+  amount: 200.0,
+  category: 'food'
+};
+
 // Test Phase 2 - Event-Driven Architecture & EventBridge Integration
 async function testPhase2EventEmission(accessToken) {
   const headers = {

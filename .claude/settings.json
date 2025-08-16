@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/opt/homebrew/lib/node_modules/rins_hooks/hooks/auto-commit/index.js\"",
+            "command": "node \"/opt/homebrew/lib/node_modules/rins_hooks/hooks/code-formatter/index.js\"",
             "timeout": 30
           }
         ]

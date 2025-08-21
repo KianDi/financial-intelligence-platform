@@ -340,3 +340,15 @@ resources:
         Ref: CognitoUserPoolClient
       Export:
         Name: ${self:service}-UserPoolClientId
+
+    WebSocketApiId:
+      Value:
+        Ref: WebsocketsApi
+      Export:
+        Name: ${self:service}-WebSocketApiId
+
+    WebSocketApiUrl:
+      Value:
+        Fn::Sub: 'wss://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
+      Export:
+        Name: ${self:service}-WebSocketApiUrl

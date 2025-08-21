@@ -26,6 +26,7 @@ provider:
             - arn:aws:dynamodb:us-east-1:*:table/Transactions
             - arn:aws:dynamodb:us-east-1:*:table/Users
             - arn:aws:dynamodb:us-east-1:*:table/Transactions/index/*
+            - arn:aws:dynamodb:us-east-1:*:table/WebSocketConnections
         - Effect: Allow
           Action:
             - events:PutEvents
@@ -185,6 +186,25 @@ functions:
             source:
               - financial.platform
             # Log all events from the financial platform
+
+  # WebSocket Connection Management Functions
+  websocketConnect:
+    handler: functions/websocketConnect.handler
+    events:
+      - websocket:
+          route: $connect
+
+  websocketDisconnect:
+    handler: functions/websocketDisconnect.handler
+    events:
+      - websocket:
+          route: $disconnect
+
+  websocketMessage:
+    handler: functions/websocketMessage.handler
+    events:
+      - websocket:
+          route: $default
 
 resources:
   Resources:

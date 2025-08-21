@@ -41,6 +41,10 @@ provider:
           Fn::Sub: 'https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}'
         audience:
           - Ref: CognitoUserPoolClient
+  
+  # WebSocket API Gateway
+  websocketsApiName: financial-platform-websocket
+  websocketsApiRouteSelectionExpression: $request.body.action
 
 functions:
   createBudget:

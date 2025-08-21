@@ -31,6 +31,11 @@ provider:
             - events:PutEvents
           Resource:
             - arn:aws:events:${self:provider.region}:*:event-bus/financial-platform-events
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource:
+            - arn:aws:execute-api:${self:provider.region}:*:*/*/POST/@connections/*
   httpApi:
     cors: true
     authorizers:

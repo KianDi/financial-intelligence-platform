@@ -16,7 +16,8 @@ const client = jwksClient({
 exports.handler = async (event, context) => {
   console.log('WebSocket Connect event:', JSON.stringify(event, null, 2));
   
-  const { connectionId, requestContext, queryStringParameters = {}, headers = {} } = event;
+  const { requestContext, queryStringParameters = {}, headers = {} } = event;
+  const connectionId = requestContext?.connectionId;
   
   try {
     // Extract JWT token from query parameters or headers

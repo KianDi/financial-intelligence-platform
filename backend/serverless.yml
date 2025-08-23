@@ -11,6 +11,12 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     TABLE_NAME: Budgets
+    COGNITO_USER_POOL_ID:
+      Ref: CognitoUserPool
+    COGNITO_CLIENT_ID:
+      Ref: CognitoUserPoolClient
+    WEBSOCKET_API_ENDPOINT:
+      Fn::Sub: 'https://${WebsocketsApi}.execute-api.${AWS::Region}.amazonaws.com/${self:provider.stage}'
   iam:
     role:
       statements:

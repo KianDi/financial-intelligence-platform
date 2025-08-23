@@ -16,13 +16,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "aws-sdk": "^2.1692.0",
     "@aws-sdk/client-eventbridge": "^3.658.1",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.11.0",
-    "uuid": "^11.1.0",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
-    "ws": "^8.18.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

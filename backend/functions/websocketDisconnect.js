@@ -6,7 +6,8 @@ const docClient = new AWS.DynamoDB.DocumentClient();
 exports.handler = async (event, context) => {
   console.log('WebSocket Disconnect event:', JSON.stringify(event, null, 2));
   
-  const { connectionId, requestContext } = event;
+  const { requestContext } = event;
+  const connectionId = requestContext?.connectionId;
   
   if (!connectionId) {
     console.error('No connectionId provided in disconnect event');

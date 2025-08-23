@@ -91,11 +91,10 @@ async function verifyJWTToken(token) {
     // Get signing key from JWKS
     const key = await getSigningKey(decoded.header.kid);
     
-    // Verify token
+    // Verify token (don't verify audience for access tokens)
     const verified = jwt.verify(token, key, {
       algorithms: ['RS256'],
-      issuer: `https://cognito-idp.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`,
-      audience: process.env.COGNITO_CLIENT_ID
+      issuer: `https://cognito-idp.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
     });
 
     // Extract user ID from token claims

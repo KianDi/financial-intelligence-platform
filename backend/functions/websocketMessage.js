@@ -9,7 +9,8 @@ const apiGateway = new AWS.ApiGatewayManagementApi({
 exports.handler = async (event, context) => {
   console.log('WebSocket Message event:', JSON.stringify(event, null, 2));
   
-  const { connectionId, requestContext } = event;
+  const { requestContext } = event;
+  const connectionId = requestContext?.connectionId;
   
   if (!connectionId) {
     console.error('No connectionId provided in message event');

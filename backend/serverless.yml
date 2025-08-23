@@ -8,6 +8,7 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: us-east-1
+  stage: ${opt:stage, 'dev'}
   environment:
     TABLE_NAME: Budgets
   iam:

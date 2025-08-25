@@ -81,7 +81,7 @@ async function processBudgetThresholdNotification(eventDetail) {
       userProfile
     });
 
-    // Send notification (currently console logging, extensible for email/push/SMS)
+    // Send notification (console logging + WebSocket + extensible for email/push/SMS)
     await sendNotification({
       userId,
       budgetId,
@@ -89,6 +89,41 @@ async function processBudgetThresholdNotification(eventDetail) {
       thresholdType,
       userProfile
     });
+
+    // Send real-time WebSocket notification to user and subscribers
+    try {
+      const webSocketNotification = {
+        type: 'notification',
+        subtype: 'budget_alert',
+        data: {
+          budgetId,
+          category,
+          thresholdType,
+          urgency: notificationMessage.urgency,
+          title: notificationMessage.title,
+          message: notificationMessage.text,
+          currentSpending,
+          limit,
+          percentageUsed: parseFloat(percentageUsed.toFixed(2)),
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      // Broadcast to user's active connections
+      const userBroadcast = await broadcastToUser(userId, webSocketNotification);
+      
+      // Broadcast to household/family subscribers (if subscribed to budget alerts)
+      const channelBroadcast = await broadcastToSubscribers(
+        `user_${userId}_budget_alerts`, 
+        webSocketNotification, 
+        userId
+      );
+
+      console.log(`WebSocket notification sent - User: ${userBroadcast.delivered}/${userBroadcast.failed}, Channel: ${channelBroadcast.delivered}/${channelBroadcast.failed}`);
+    } catch (wsError) {
+      console.error('Failed to send WebSocket notification:', wsError);
+      // Continue processing even if WebSocket notification fails
+    }
 
     // Store notification in database for user history
     await storeNotificationHistory({

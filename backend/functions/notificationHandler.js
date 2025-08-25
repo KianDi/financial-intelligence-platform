@@ -260,7 +260,7 @@ async function storeNotificationHistory({ userId, budgetId, category, currentSpe
       percentageUsed,
       message,
       sentAt: timestamp,
-      channel: 'console', // Future: email, push, sms
+      channel: 'websocket', // Now includes WebSocket + console
       status: 'sent'
     };
 

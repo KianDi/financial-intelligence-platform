@@ -169,7 +169,7 @@ async function getUserProfile(userId) {
         budgetAlerts: true,
         email: null,
         phone: null,
-        preferredChannel: 'console'
+        preferredChannel: 'websocket'
       }
     };
   } catch (error) {
@@ -179,7 +179,7 @@ async function getUserProfile(userId) {
       userId,
       notificationPreferences: {
         budgetAlerts: true,
-        preferredChannel: 'console'
+        preferredChannel: 'websocket'
       }
     };
   }

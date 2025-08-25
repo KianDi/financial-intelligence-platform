@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
           throw new NonRetryableError(`Missing required fields: userId or category in event ${eventType}`);
         }
 
-        return await processTransactionEvent(eventDetail, eventType);
+        return await processTransactionEvent(eventDetail, eventType, record);
       },
       { functionName: context.functionName }
     );

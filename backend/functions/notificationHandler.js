@@ -143,7 +143,7 @@ async function processBudgetThresholdNotification(eventDetail) {
       budgetId,
       category,
       thresholdType,
-      notificationChannel: 'console' // Future: email, push, sms
+      notificationChannel: 'websocket' // Now includes WebSocket + console
     });
 
     console.log(`Notification processed for user ${userId}, budget ${budgetId}`);

@@ -2,6 +2,7 @@ const AWS = require('aws-sdk');
 const { EventBridgeClient, PutEventsCommand } = require('@aws-sdk/client-eventbridge');
 const { createBudgetThresholdReachedEvent, validateEventSchema } = require('../schemas/eventSchemas');
 const { processEventWithRetry, RetryableError, NonRetryableError, getSystemHealth } = require('../utils/errorHandling');
+const { notifyBudgetThreshold, notifyTransactionCreated, notifyTransactionUpdated, notifyTransactionDeleted } = require('../utils/websocketUtils');
 const docClient = new AWS.DynamoDB.DocumentClient();
 const eventBridge = new EventBridgeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 

@@ -92,6 +92,21 @@ async function processTransactionEvent(eventDetail, eventType, record) {
   }
 
   try {
+    // Send real-time transaction notifications first
+    try {
+      if (eventType === 'Transaction Created') {
+        await notifyTransactionCreated(userId, transactionData);
+      } else if (eventType === 'Transaction Updated') {
+        const changes = eventDetail.changes || {};
+        await notifyTransactionUpdated(userId, transactionData, changes);
+      } else if (eventType === 'Transaction Deleted') {
+        await notifyTransactionDeleted(userId, transactionData.timestamp);
+      }
+    } catch (wsError) {
+      console.error('Failed to send WebSocket transaction notification:', wsError);
+      // Continue processing even if WebSocket notification fails
+    }
+
     // Get user's budgets for this category
     const budgets = await getUserBudgetsForCategory(userId, category);
 

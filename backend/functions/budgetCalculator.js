@@ -102,6 +102,9 @@ async function processTransactionEvent(eventDetail, eventType) {
 
       // Check if threshold is reached (80% and 100%)
       if (percentageUsed >= 80) {
+        const thresholdType = percentageUsed >= 100 ? 'exceeded' : 'warning';
+        
+        // Emit EventBridge event for other consumers
         await emitBudgetThresholdEvent(
           userId,
           budget.budgetId,
@@ -110,6 +113,23 @@ async function processTransactionEvent(eventDetail, eventType) {
           budgetLimit,
           percentageUsed
         );
+
+        // Send real-time WebSocket notification
+        try {
+          const budgetData = {
+            budgetId: budget.budgetId,
+            category: category,
+            currentAmount: currentSpending,
+            budgetLimit: budgetLimit,
+            utilizationPercentage: percentageUsed
+          };
+
+          const wsResult = await notifyBudgetThreshold(userId, budgetData, thresholdType);
+          console.log(`WebSocket notification sent: ${wsResult.delivered} delivered, ${wsResult.failed} failed`);
+        } catch (wsError) {
+          console.error('Failed to send WebSocket budget threshold notification:', wsError);
+          // Continue processing even if WebSocket notification fails
+        }
       }
 
       // Update budget utilization metrics

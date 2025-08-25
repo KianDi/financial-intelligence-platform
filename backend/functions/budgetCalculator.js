@@ -54,24 +54,27 @@ exports.handler = async (event, context) => {
   }
 };
 
-async function processTransactionEvent(eventDetail, eventType) {
-  let userId, category, amount, type;
+async function processTransactionEvent(eventDetail, eventType, record) {
+  let userId, category, amount, type, transactionData;
 
   // Extract data based on event type
   if (eventType === 'Transaction Created') {
     ({ userId, category, amount, type } = eventDetail);
+    transactionData = eventDetail;
   } else if (eventType === 'Transaction Updated') {
     userId = eventDetail.userId;
     // Use the new state for calculations
     category = eventDetail.afterState.category;
     amount = eventDetail.afterState.amount;
     type = eventDetail.afterState.type;
+    transactionData = eventDetail.afterState;
   } else if (eventType === 'Transaction Deleted') {
     userId = eventDetail.userId;
     // Use the deleted transaction data for reverse calculations
     category = eventDetail.deletedTransaction.category;
     amount = eventDetail.deletedTransaction.amount;
     type = eventDetail.deletedTransaction.type;
+    transactionData = eventDetail.deletedTransaction;
   } else {
     console.error(`Unknown event type: ${eventType}`);
     return;

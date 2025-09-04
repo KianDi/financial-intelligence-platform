@@ -26,10 +26,10 @@ export const BudgetAlerts = ({ webSocketClient, maxAlerts = 5 }: BudgetAlertsPro
     if (!webSocketClient) return;
 
     // Listen for connection changes
-    const unsubscribeConnection = webSocketClient.onConnectionChange((connected) => {
-      setIsConnected(connected);
+    const unsubscribeConnection = webSocketClient.onConnectionChange((state, error) => {
+      setConnectionState(state);
       
-      if (connected) {
+      if (state === ConnectionState.CONNECTED) {
         // Request current budget status
         webSocketClient.requestLiveData('budget_status');
         

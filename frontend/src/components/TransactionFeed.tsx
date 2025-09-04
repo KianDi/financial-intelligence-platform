@@ -142,6 +142,11 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
     return date.toLocaleDateString();
   };
 
+  // Helper functions for UI state
+  const isConnected = connectionState === ConnectionState.CONNECTED;
+  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
+  const isConnecting = connectionState === ConnectionState.CONNECTING;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
@@ -149,21 +154,43 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
           Recent Transactions
         </h2>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-2 h-2 rounded-full ${
+            isConnected ? 'bg-green-500' : 
+            isReconnecting ? 'bg-yellow-500 animate-pulse' :
+            isConnecting ? 'bg-blue-500 animate-pulse' :
+            'bg-red-500'
+          }`} />
           <span className="text-sm text-gray-500">
-            {isConnected ? 'Live' : 'Disconnected'}
+            {isConnected ? 'Live' : 
+             isReconnecting ? 'Reconnecting' :
+             isConnecting ? 'Connecting' :
+             'Disconnected'}
           </span>
+          {isLoading && (
+            <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-blue-600" />
+          )}
         </div>
       </div>
 
-      {transactions.length === 0 ? (
+      {isLoading ? (
         <div className="text-center py-8 text-gray-500">
-          {isConnected ? 'No recent transactions' : 'Connecting to live feed...'}
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mx-auto mb-4" />
+          <div>Loading recent transactions...</div>
+        </div>
+      ) : transactions.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <div className="text-4xl mb-2">📊</div>
+          <div>
+            {isConnected ? 'No recent transactions' : 
+             isReconnecting ? 'Reconnecting to live feed...' :
+             'Waiting for connection...'}
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
           {transactions.map((transaction) => {
             const { formatted: amount, isNegative } = formatAmount(transaction.amount);
+            const transactionType = transaction.type || (transaction.amount < 0 ? 'expense' : 'income');
             
             return (
               <div
@@ -178,14 +205,23 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                       {transaction.category}
                     </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      transactionType === 'income' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {transactionType}
+                    </span>
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
                     {formatTime(transaction.timestamp)}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`font-semibold ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                    {isNegative ? '-' : '+'}{amount}
+                  <div className={`font-semibold ${
+                    transactionType === 'income' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transactionType === 'income' ? '+' : '-'}{amount}
                   </div>
                 </div>
               </div>

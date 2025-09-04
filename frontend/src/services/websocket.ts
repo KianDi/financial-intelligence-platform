@@ -86,13 +86,15 @@ export class WebSocketClient {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
+      if (this.connectionState === ConnectionState.CONNECTING || 
+          this.connectionState === ConnectionState.CONNECTED) {
         resolve();
         return;
       }
 
-      this.isConnecting = true;
+      this.updateConnectionState(ConnectionState.CONNECTING);
       this.isIntentionallyClosed = false;
+      this.clearTimers();
 
       try {
         const wsUrl = `${this.url}?token=${this.token}`;
@@ -102,9 +104,9 @@ export class WebSocketClient {
 
         this.ws.onopen = () => {
           console.log('✅ WebSocket connected successfully');
-          this.isConnecting = false;
           this.reconnectAttempts = 0;
-          this.notifyConnectionListeners(true);
+          this.updateConnectionState(ConnectionState.CONNECTED);
+          this.startHeartbeat();
           
           // Re-subscribe to channels if any
           if (this.subscribedChannels.size > 0) {
@@ -125,26 +127,37 @@ export class WebSocketClient {
 
         this.ws.onclose = (event) => {
           console.log(`🔌 WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}`);
-          this.isConnecting = false;
-          this.notifyConnectionListeners(false);
+          this.clearTimers();
           
-          if (!this.isIntentionallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
+          const error = this.parseWebSocketError(event, event.code);
+          
+          if (!this.isIntentionallyClosed && error.retryable && 
+              this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.updateConnectionState(ConnectionState.RECONNECTING, error);
             this.attemptReconnect();
+          } else {
+            this.updateConnectionState(
+              error.retryable ? ConnectionState.DISCONNECTED : ConnectionState.FAILED, 
+              error
+            );
           }
         };
 
         this.ws.onerror = (error) => {
           console.error('❌ WebSocket error:', error);
-          this.isConnecting = false;
+          const connectionError = this.parseWebSocketError(error);
           
           if (this.reconnectAttempts === 0) {
-            reject(error);
+            this.updateConnectionState(ConnectionState.FAILED, connectionError);
+            reject(connectionError);
           }
         };
 
       } catch (error) {
-        this.isConnecting = false;
-        reject(error);
+        const connectionError = this.createConnectionError('UNKNOWN', 
+          error instanceof Error ? error.message : 'Failed to create WebSocket connection');
+        this.updateConnectionState(ConnectionState.FAILED, connectionError);
+        reject(connectionError);
       }
     });
   }

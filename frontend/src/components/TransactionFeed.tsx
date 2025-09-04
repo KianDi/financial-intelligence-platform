@@ -24,15 +24,18 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
     if (!webSocketClient) return;
 
     // Listen for connection changes
-    const unsubscribeConnection = webSocketClient.onConnectionChange((connected) => {
-      setIsConnected(connected);
+    const unsubscribeConnection = webSocketClient.onConnectionChange((state, error) => {
+      setConnectionState(state);
       
-      if (connected) {
+      if (state === ConnectionState.CONNECTED) {
+        setIsLoading(true);
         // Request live transaction data on connection
         webSocketClient.requestLiveData('recent_transactions');
         
         // Subscribe to transaction channels
         webSocketClient.subscribeToChannels(['transactions']);
+      } else if (state === ConnectionState.DISCONNECTED || state === ConnectionState.FAILED) {
+        setIsLoading(false);
       }
     });
 
@@ -58,6 +61,7 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
       if (message.data?.dataType === 'recent_transactions') {
         console.log('📋 Live transaction data received:', message.data);
         setTransactions(message.data.transactions || []);
+        setIsLoading(false);
       }
     });
 

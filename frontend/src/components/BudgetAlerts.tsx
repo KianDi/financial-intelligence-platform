@@ -20,7 +20,7 @@ interface BudgetAlertsProps {
 
 export const BudgetAlerts = ({ webSocketClient, maxAlerts = 5 }: BudgetAlertsProps) => {
   const [alerts, setAlerts] = useState<BudgetAlert[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
 
   useEffect(() => {
     if (!webSocketClient) return;

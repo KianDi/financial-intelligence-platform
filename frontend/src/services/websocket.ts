@@ -37,12 +37,16 @@ export class WebSocketClient {
   private url: string;
   private reconnectInterval: number;
   private maxReconnectAttempts: number;
+  private heartbeatInterval: number;
   private reconnectAttempts: number = 0;
-  private isConnecting: boolean = false;
+  private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
   private isIntentionallyClosed: boolean = false;
   private subscriptions: Map<string, Set<SubscriptionCallback>> = new Map();
   private subscribedChannels: Set<string> = new Set();
-  private connectionListeners: Set<(connected: boolean) => void> = new Set();
+  private connectionListeners: Set<(state: ConnectionState, error?: ConnectionError) => void> = new Map();
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private lastPongReceived: number = 0;
+  private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor(options: ConnectionOptions) {
     this.token = options.token;

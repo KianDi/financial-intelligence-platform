@@ -29,7 +29,6 @@ function App() {
 
   const initializeWebSocket = async (token: string) => {
     try {
-      setIsConnecting(true);
       setConnectionError(null);
       
       const client = getWebSocketClient(token);
@@ -37,15 +36,16 @@ function App() {
         throw new Error('Failed to create WebSocket client');
       }
 
-      // Listen for connection changes
-      client.onConnectionChange((connected) => {
-        setIsConnected(connected);
-        setIsConnecting(false);
+      // Listen for connection changes with enhanced error handling
+      client.onConnectionChange((state, error) => {
+        setConnectionState(state);
+        setConnectionError(error || null);
         
-        if (!connected) {
-          setConnectionError('Connection lost. Attempting to reconnect...');
-        } else {
-          setConnectionError(null);
+        // Track reconnection attempts
+        if (state === ConnectionState.RECONNECTING) {
+          setReconnectAttempts(prev => prev + 1);
+        } else if (state === ConnectionState.CONNECTED) {
+          setReconnectAttempts(0);
         }
       });
 
@@ -58,8 +58,11 @@ function App() {
       
     } catch (error) {
       console.error('Failed to initialize WebSocket:', error);
-      setConnectionError(error instanceof Error ? error.message : 'Connection failed');
-      setIsConnecting(false);
+      setConnectionError({
+        type: 'UNKNOWN',
+        message: error instanceof Error ? error.message : 'Connection failed',
+        retryable: true
+      });
     }
   };
 

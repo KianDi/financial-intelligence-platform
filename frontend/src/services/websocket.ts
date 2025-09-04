@@ -368,18 +368,16 @@ export class WebSocketClient {
   disconnect() {
     this.isIntentionallyClosed = true;
     this.reconnectAttempts = this.maxReconnectAttempts;
+    this.clearTimers();
     
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
     }
     
+    this.updateConnectionState(ConnectionState.DISCONNECTED);
     this.subscriptions.clear();
     this.subscribedChannels.clear();
     this.connectionListeners.clear();
-  }
-
-  isConnected(): boolean {
-    return this.ws ? this.ws.readyState === WebSocket.OPEN : false;
   }
 }
 

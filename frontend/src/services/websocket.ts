@@ -221,6 +221,7 @@ export class WebSocketClient {
     // Handle different message types
     switch (message.type) {
       case 'pong':
+        this.lastPongReceived = Date.now();
         this.notifySubscribers('ping', message);
         break;
       case 'subscription_confirmed':
@@ -264,10 +265,10 @@ export class WebSocketClient {
     }
   }
 
-  private notifyConnectionListeners(connected: boolean) {
+  private notifyConnectionListeners(state: ConnectionState, error?: ConnectionError) {
     this.connectionListeners.forEach(callback => {
       try {
-        callback(connected);
+        callback(state, error);
       } catch (error) {
         console.error('❌ Error in connection listener:', error);
       }

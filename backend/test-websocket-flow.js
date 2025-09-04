@@ -4,8 +4,15 @@ const WebSocket = require('ws');
 const API_BASE_URL = 'https://4we9e1egsg.execute-api.us-east-1.amazonaws.com';
 const WS_BASE_URL = 'wss://ke2ary80yk.execute-api.us-east-1.amazonaws.com/dev';
 
-// Use the token from test-auth.js
-const ACCESS_TOKEN = 'eyJraWQiOiJBQjNwT2JZcEl0R0I4UEhzclVTK2Q0VWl1VGJPZEV0eWtxVGlvSGlvZ2pjPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJlNDU4MDQ1OC05MDAxLTcwMzMtZjA1Yy1hYjkwMDA2NDZmMTYiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9iRk93RnNJZFYiLCJjbGllbnRfaWQiOiI1dnNxZ2hpaGtqcWdtaGdxbjZjNmRnb21laSIsIm9yaWdpbl9qdGkiOiJjZjIwNzI4Mi00NGNhLTQ5NDgtYTJhOS01YTE4YmQzMzkwMmMiLCJldmVudF9pZCI6IjVmYjI5OWJmLWQyNmQtNDU1Yy05M2UxLWVjMmVmYzliMmZhYiIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoiYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4iLCJhdXRoX3RpbWUiOjE3NTY5NjAxOTAsImV4cCI6MTc1Njk2Mzc5MCwiaWF0IjoxNTY5NjAxOTAsImp0aSI6IjAzNDUxZmE4LTkwYmYtNDViNy04MzgzLTBhZWNiNWQxZTFlMyIsInVzZXJuYW1lIjoiZTQ1ODA0NTgtOTAwMS03MDMzLWYwNWMtYWI5MDAwNjQ2ZjE2In0.NWEAfCHB_ItTY7hDK7RqAZ_-liJySR-z0Qcm-5bgNJjHXDb9lMZ605b1r_gMlIEyMSyxUHf9JSPkpMMrBKFgycnNhm-JnXCNQzfbR-Ofe2U0PO1yYjTERhlwkGoHFGByghmIuQ61rv0VRz-Msadc2LSPKDwkCHZo44TvScPZMpRW3V4nnvFLbZ1UEq7uwll6EfuEDiuZZWLO1XNm5Mof73j-EkFU9YisZR9NozOL1XPZuafkX-FqdEasob-U-enDAumlxGTZLk-SJhVr-QEuD4WctBN7mOcA6QcRiQ0E9HxQY9cgfm4NuYsFelPUWdHLxEik43newL8i1r_iwa2uRA';
+// Get token from command line argument
+const ACCESS_TOKEN = process.argv[2];
+
+if (!ACCESS_TOKEN) {
+    console.log('❌ Please provide an access token as argument');
+    console.log('Usage: node test-websocket-flow.js [ACCESS_TOKEN]');
+    console.log('Get token by running: node test-auth.js');
+    process.exit(1);
+}
 
 async function testWebSocketFlow() {
     console.log('🔌 Testing WebSocket Live Updates Flow\n');

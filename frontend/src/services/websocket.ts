@@ -53,6 +53,35 @@ export class WebSocketClient {
     this.url = 'wss://ke2ary80yk.execute-api.us-east-1.amazonaws.com/dev';
     this.reconnectInterval = options.reconnectInterval || 3000;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
+    this.heartbeatInterval = options.heartbeatInterval || 30000; // 30 seconds
+  }
+
+  private updateConnectionState(state: ConnectionState, error?: ConnectionError) {
+    if (this.connectionState !== state) {
+      this.connectionState = state;
+      this.notifyConnectionListeners(state, error);
+    }
+  }
+
+  private createConnectionError(type: ConnectionError['type'], message: string, code?: number): ConnectionError {
+    return {
+      type,
+      message,
+      code,
+      retryable: type !== 'AUTH_FAILED'
+    };
+  }
+
+  private parseWebSocketError(event: Event, code?: number): ConnectionError {
+    if (code === 4001 || code === 401) {
+      return this.createConnectionError('AUTH_FAILED', 'Authentication failed. Please refresh your token.', code);
+    } else if (code === 4000 || (code && code >= 4000 && code < 5000)) {
+      return this.createConnectionError('SERVER_ERROR', 'Server error. Please try again later.', code);
+    } else if (!navigator.onLine) {
+      return this.createConnectionError('NETWORK_ERROR', 'No internet connection.', code);
+    } else {
+      return this.createConnectionError('NETWORK_ERROR', 'Connection failed. Check your internet connection.', code);
+    }
   }
 
   connect(): Promise<void> {

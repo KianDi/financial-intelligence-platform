@@ -76,17 +76,32 @@ function App() {
     if (webSocketClient) {
       webSocketClient.disconnect();
       setWebSocketClient(null);
-      setIsConnected(false);
+      setConnectionState(ConnectionState.DISCONNECTED);
       setConnectionError(null);
+      setReconnectAttempts(0);
       localStorage.removeItem('budget_tracker_token');
     }
   };
 
+  const handleRetry = () => {
+    if (authToken.trim() && connectionError?.retryable) {
+      setReconnectAttempts(0);
+      initializeWebSocket(authToken.trim());
+    }
+  };
+
   const testConnection = () => {
-    if (webSocketClient && isConnected) {
+    if (webSocketClient && webSocketClient.isConnected()) {
       webSocketClient.ping();
     }
   };
+
+  // Helper functions for UI state
+  const isConnected = connectionState === ConnectionState.CONNECTED;
+  const isConnecting = connectionState === ConnectionState.CONNECTING;
+  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
+  const isFailed = connectionState === ConnectionState.FAILED;
+  const canConnect = !isConnecting && !isReconnecting && authToken.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">

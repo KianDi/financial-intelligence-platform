@@ -67,6 +67,8 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
   }, [webSocketClient]);
 
   const handleTransactionCreated = (data: any) => {
+    console.log('Processing transaction created:', data);
+    
     const newTransaction: Transaction = {
       transactionId: data.transactionId,
       amount: data.amount,
@@ -76,6 +78,13 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
     };
 
     setTransactions(prev => {
+      // Check if transaction already exists to prevent duplicates
+      const exists = prev.some(t => t.transactionId === newTransaction.transactionId);
+      if (exists) {
+        console.log('Transaction already exists, skipping:', newTransaction.transactionId);
+        return prev;
+      }
+      
       const updated = [newTransaction, ...prev];
       return updated.slice(0, maxItems);
     });

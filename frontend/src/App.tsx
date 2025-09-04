@@ -117,7 +117,7 @@ function App() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Connection Panel */}
+        {/* Enhanced Connection Panel */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">WebSocket Connection</h2>
           
@@ -135,20 +135,40 @@ function App() {
                     onChange={(e) => setAuthToken(e.target.value)}
                     placeholder="Enter your JWT token..."
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={isConnecting || isReconnecting}
                   />
                   <button
                     onClick={handleConnect}
-                    disabled={!authToken.trim() || isConnecting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!canConnect}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
+                    {isConnecting && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    )}
                     {isConnecting ? 'Connecting...' : 'Connect'}
                   </button>
                 </div>
               </div>
               
               {connectionError && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                  {connectionError}
+                <div className={`text-sm p-3 rounded-md ${
+                  connectionError.type === 'AUTH_FAILED' 
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : connectionError.type === 'NETWORK_ERROR'
+                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span>{connectionError.message}</span>
+                    {connectionError.retryable && (
+                      <button
+                        onClick={handleRetry}
+                        className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
               
@@ -160,31 +180,64 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="font-medium">
-                  {isConnected ? 'Connected to WebSocket' : 'Disconnected'}
-                </span>
-                {connectionError && (
-                  <span className="text-red-600 text-sm">({connectionError})</span>
-                )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    isConnected ? 'bg-green-500' : 
+                    isReconnecting ? 'bg-yellow-500 animate-pulse' :
+                    isConnecting ? 'bg-blue-500 animate-pulse' :
+                    'bg-red-500'
+                  }`} />
+                  <span className="font-medium">
+                    {isConnected ? 'Connected to WebSocket' : 
+                     isReconnecting ? `Reconnecting (attempt ${reconnectAttempts})` :
+                     isConnecting ? 'Connecting...' :
+                     isFailed ? 'Connection Failed' :
+                     'Disconnected'}
+                  </span>
+                  {isReconnecting && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent" />
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={testConnection}
+                    disabled={!isConnected}
+                    className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    Test Ping
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={testConnection}
-                  disabled={!isConnected}
-                  className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Test Ping
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                >
-                  Disconnect
-                </button>
-              </div>
+              
+              {connectionError && (
+                <div className={`text-sm p-3 rounded-md ${
+                  connectionError.type === 'AUTH_FAILED' 
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : connectionError.type === 'NETWORK_ERROR'
+                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span>{connectionError.message}</span>
+                    {connectionError.retryable && !isReconnecting && (
+                      <button
+                        onClick={handleRetry}
+                        className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                      >
+                        Retry Now
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

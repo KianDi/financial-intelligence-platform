@@ -27,6 +27,7 @@ provider:
             - dynamodb:GetItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
+            - dynamodb:Scan
           Resource:
             - arn:aws:dynamodb:us-east-1:*:table/Budgets
             - arn:aws:dynamodb:us-east-1:*:table/Expenses
@@ -34,6 +35,7 @@ provider:
             - arn:aws:dynamodb:us-east-1:*:table/Users
             - arn:aws:dynamodb:us-east-1:*:table/Transactions/index/*
             - arn:aws:dynamodb:us-east-1:*:table/WebSocketConnections
+            - arn:aws:dynamodb:us-east-1:*:table/WebSocketConnections/index/*
         - Effect: Allow
           Action:
             - events:PutEvents

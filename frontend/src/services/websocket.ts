@@ -137,12 +137,6 @@ export class WebSocketClient {
         if (message.channel) {
           this.notifySubscribers(message.channel, message);
         }
-        // Also notify transaction subscribers for broadcast messages
-        if (message.type === 'transaction_created' || 
-            message.type === 'transaction_updated' || 
-            message.type === 'transaction_deleted') {
-          this.notifySubscribers('transaction', message);
-        }
         break;
       case 'error':
         this.notifySubscribers('error', message);

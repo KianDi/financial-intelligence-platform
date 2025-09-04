@@ -9,10 +9,26 @@ interface ConnectionOptions {
   token: string;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
 }
 
 interface SubscriptionCallback {
   (message: WebSocketMessage): void;
+}
+
+interface ConnectionError {
+  type: 'AUTH_FAILED' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'UNKNOWN';
+  message: string;
+  code?: number;
+  retryable: boolean;
+}
+
+export enum ConnectionState {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  RECONNECTING = 'reconnecting',
+  FAILED = 'failed'
 }
 
 export class WebSocketClient {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { WebSocketClient } from '../services/websocket';
+import { WebSocketClient, ConnectionState } from '../services/websocket';
 
 interface Transaction {
   transactionId: string;
@@ -7,6 +7,7 @@ interface Transaction {
   category: string;
   description: string;
   timestamp: string;
+  type?: 'income' | 'expense';
 }
 
 interface TransactionFeedProps {
@@ -16,7 +17,8 @@ interface TransactionFeedProps {
 
 export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionFeedProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!webSocketClient) return;

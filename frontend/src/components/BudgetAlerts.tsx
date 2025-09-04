@@ -133,6 +133,11 @@ export const BudgetAlerts = ({ webSocketClient, maxAlerts = 5 }: BudgetAlertsPro
     return date.toLocaleDateString();
   };
 
+  // Helper functions for UI state
+  const isConnected = connectionState === ConnectionState.CONNECTED;
+  const isReconnecting = connectionState === ConnectionState.RECONNECTING;
+  const isConnecting = connectionState === ConnectionState.CONNECTING;
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
@@ -140,9 +145,17 @@ export const BudgetAlerts = ({ webSocketClient, maxAlerts = 5 }: BudgetAlertsPro
           Budget Alerts
         </h2>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-2 h-2 rounded-full ${
+            isConnected ? 'bg-green-500' : 
+            isReconnecting ? 'bg-yellow-500 animate-pulse' :
+            isConnecting ? 'bg-blue-500 animate-pulse' :
+            'bg-red-500'
+          }`} />
           <span className="text-sm text-gray-500">
-            {isConnected ? 'Live' : 'Disconnected'}
+            {isConnected ? 'Live' : 
+             isReconnecting ? 'Reconnecting' :
+             isConnecting ? 'Connecting' :
+             'Disconnected'}
           </span>
         </div>
       </div>
@@ -152,7 +165,11 @@ export const BudgetAlerts = ({ webSocketClient, maxAlerts = 5 }: BudgetAlertsPro
           <div className="text-4xl mb-2">✅</div>
           <div>All budgets are on track</div>
           {!isConnected && (
-            <div className="text-sm mt-1">Connecting to live monitoring...</div>
+            <div className="text-sm mt-1">
+              {isReconnecting ? 'Reconnecting to live monitoring...' :
+               isConnecting ? 'Connecting to live monitoring...' :
+               'Waiting for connection...'}
+            </div>
           )}
         </div>
       ) : (

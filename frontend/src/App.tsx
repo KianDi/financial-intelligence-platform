@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { getWebSocketClient, WebSocketClient } from './services/websocket';
+import { getWebSocketClient, WebSocketClient, ConnectionState } from './services/websocket';
 import { TransactionFeed } from './components/TransactionFeed';
 import { BudgetAlerts } from './components/BudgetAlerts';
 
+interface ConnectionError {
+  type: 'AUTH_FAILED' | 'NETWORK_ERROR' | 'SERVER_ERROR' | 'UNKNOWN';
+  message: string;
+  code?: number;
+  retryable: boolean;
+}
+
 function App() {
   const [webSocketClient, setWebSocketClient] = useState<WebSocketClient | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
+  const [connectionError, setConnectionError] = useState<ConnectionError | null>(null);
   const [authToken, setAuthToken] = useState<string>('');
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
 
   useEffect(() => {
     // Check for existing token in localStorage

@@ -297,12 +297,28 @@ export class WebSocketClient {
     }
   }
 
-  onConnectionChange(callback: (connected: boolean) => void) {
+  onConnectionChange(callback: (state: ConnectionState, error?: ConnectionError) => void) {
     this.connectionListeners.add(callback);
     
     return () => {
       this.connectionListeners.delete(callback);
     };
+  }
+
+  getConnectionState(): ConnectionState {
+    return this.connectionState;
+  }
+
+  isConnected(): boolean {
+    return this.connectionState === ConnectionState.CONNECTED;
+  }
+
+  isConnecting(): boolean {
+    return this.connectionState === ConnectionState.CONNECTING;
+  }
+
+  isReconnecting(): boolean {
+    return this.connectionState === ConnectionState.RECONNECTING;
   }
 
   subscribeToChannels(channels: string[]) {

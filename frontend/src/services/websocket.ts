@@ -166,11 +166,53 @@ export class WebSocketClient {
     this.reconnectAttempts++;
     console.log(`🔄 Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts}...`);
     
-    setTimeout(() => {
+    // Exponential backoff with jitter
+    const baseDelay = this.reconnectInterval;
+    const exponentialDelay = baseDelay * Math.pow(2, this.reconnectAttempts - 1);
+    const jitter = Math.random() * 1000; // Add up to 1 second of jitter
+    const finalDelay = Math.min(exponentialDelay + jitter, 30000); // Cap at 30 seconds
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       this.connect().catch((error) => {
         console.error('❌ Reconnection failed:', error);
+        
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          this.updateConnectionState(ConnectionState.FAILED, 
+            this.createConnectionError('NETWORK_ERROR', 'Maximum reconnection attempts exceeded'));
+        }
       });
-    }, this.reconnectInterval * this.reconnectAttempts);
+    }, finalDelay);
+  }
+
+  private startHeartbeat() {
+    this.lastPongReceived = Date.now();
+    this.heartbeatTimer = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        // Check if we received a pong recently
+        const timeSinceLastPong = Date.now() - this.lastPongReceived;
+        if (timeSinceLastPong > this.heartbeatInterval * 2) {
+          console.warn('⚠️ WebSocket heartbeat timeout - connection may be stale');
+          this.ws.close(1000, 'Heartbeat timeout');
+          return;
+        }
+        
+        // Send ping
+        this.ping();
+      }
+    }, this.heartbeatInterval);
+  }
+
+  private clearTimers() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 
   private handleMessage(message: WebSocketMessage) {

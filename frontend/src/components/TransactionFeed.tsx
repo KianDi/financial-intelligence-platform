@@ -189,7 +189,7 @@ export const TransactionFeed = ({ webSocketClient, maxItems = 10 }: TransactionF
       ) : (
         <div className="space-y-3">
           {transactions.map((transaction) => {
-            const { formatted: amount, isNegative } = formatAmount(transaction.amount);
+            const { formatted: amount } = formatAmount(transaction.amount);
             const transactionType = transaction.type || (transaction.amount < 0 ? 'expense' : 'income');
             
             return (

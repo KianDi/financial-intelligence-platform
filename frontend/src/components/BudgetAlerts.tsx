@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { WebSocketClient } from '../services/websocket';
+import { WebSocketClient, ConnectionState } from '../services/websocket';
 
 interface BudgetAlert {
   id: string;

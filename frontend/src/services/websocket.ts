@@ -122,7 +122,7 @@ export class WebSocketClient {
       case 'subscription_confirmed':
         this.notifySubscribers('subscription', message);
         break;
-      case 'live_data':
+      case 'live_data_response':
         this.notifySubscribers('live_data', message);
         break;
       case 'transaction_created':
@@ -136,6 +136,12 @@ export class WebSocketClient {
       case 'broadcast':
         if (message.channel) {
           this.notifySubscribers(message.channel, message);
+        }
+        // Also notify transaction subscribers for broadcast messages
+        if (message.type === 'transaction_created' || 
+            message.type === 'transaction_updated' || 
+            message.type === 'transaction_deleted') {
+          this.notifySubscribers('transaction', message);
         }
         break;
       case 'error':

@@ -43,7 +43,7 @@ export class WebSocketClient {
   private isIntentionallyClosed: boolean = false;
   private subscriptions: Map<string, Set<SubscriptionCallback>> = new Map();
   private subscribedChannels: Set<string> = new Set();
-  private connectionListeners: Set<(state: ConnectionState, error?: ConnectionError) => void> = new Map();
+  private connectionListeners: Set<(state: ConnectionState, error?: ConnectionError) => void> = new Set();
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private lastPongReceived: number = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;

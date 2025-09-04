@@ -4,7 +4,7 @@ const { RetryableError } = require('./errorHandling');
 
 const docClient = new AWS.DynamoDB.DocumentClient();
 const apiGateway = new AWS.ApiGatewayManagementApi({
-  endpoint: process.env.WEBSOCKET_API_ENDPOINT || 'https://your-websocket-api.execute-api.us-east-1.amazonaws.com/dev'
+  endpoint: process.env.WEBSOCKET_API_ENDPOINT || 'https://ke2ary80yk.execute-api.us-east-1.amazonaws.com/dev'
 });
 
 async function broadcastToUser(userId, message) {
